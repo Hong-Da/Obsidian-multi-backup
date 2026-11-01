@@ -1,0 +1,5 @@
+#!/bin/sh
+# 推送前检查要推送的每个提交（scripts/check-public.mjs）。启用：git config core.hooksPath .githooks
+root="$(git rev-parse --show-toplevel)"
+. "$root/scripts/env.sh" >/dev/null 2>&1
+exec node "$root/scripts/check-public.mjs" --pre-push

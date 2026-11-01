@@ -1,0 +1,44 @@
+{
+  "name": "multi-backup",
+  "version": "0.5.4",
+  "description": "Back up your vault to multiple destinations, with optional two-way sync through one primary destination.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Hong-Da",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit && node esbuild.config.mjs production",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:accept": "vitest run --config vitest.accept.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:perf": "vitest run --config vitest.perf.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "version": "node scripts/version.mjs && git add manifest.json versions.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@eslint/json": "0.14.0",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "eslint-plugin-obsidianmd": "0.4.2",
+    "obsidian": "1.14.4",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "buffer": "6.0.3",
+    "fflate": "0.8.3",
+    "isomorphic-git": "1.44.1"
+  }
+}

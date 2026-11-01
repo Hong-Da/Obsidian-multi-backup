@@ -1,0 +1,7 @@
+dist/
+dev-vault/
+.toolchain/
+node_modules/
+DevelopDocs/
+InternalDocs/
+pnpm-lock.yaml

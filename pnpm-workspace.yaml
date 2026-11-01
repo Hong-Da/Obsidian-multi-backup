@@ -1,0 +1,6 @@
+# pnpm 设置：存储与缓存放在项目内（A9）；状态目录在 scripts/env 中通过 XDG_STATE_HOME 设置
+storeDir: .toolchain/cache/pnpm-store
+cacheDir: .toolchain/cache/pnpm-cache
+# 只允许 esbuild 运行安装脚本（下载对应平台的二进制）
+allowBuilds:
+  esbuild: true

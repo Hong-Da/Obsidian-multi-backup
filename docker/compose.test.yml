@@ -1,0 +1,33 @@
+# 集成测试用的服务（只用于测试机或本机，不要部署到生产环境）。
+# 由 scripts/test-services.sh 启动；账号密码每次随机生成，经环境变量传入；数据放在容器里，停掉即清空。
+name: mbtest
+services:
+  gitea:
+    image: gitea/gitea:1.22.6
+    environment:
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__HTTP_PORT=3000
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__repository__DEFAULT_BRANCH=main
+    ports:
+      - "3300:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  # WebDAV（rclone serve webdav）
+  webdav:
+    image: rclone/rclone:1.68.2
+    command: ["serve", "webdav", "/data", "--addr", ":8080", "--user", "mbtest", "--pass", "${MB_WEBDAV_PASSWORD:?}"]
+    ports:
+      - "3880:8080"
+
+  # S3 兼容存储（rclone serve s3；MinIO 的社区镜像已无法公开拉取）
+  s3:
+    image: rclone/rclone:1.68.2
+    command: ["serve", "s3", "/data", "--addr", ":8080", "--auth-key", "mbtest,${MB_S3_SECRET:?}", "--force-path-style"]
+    ports:
+      - "3900:8080"

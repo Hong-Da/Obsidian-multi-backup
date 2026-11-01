@@ -1,0 +1,38 @@
+# 推送 v 开头的版本标签（如 v0.6.0）时：检查、测试、构建，然后建一个草稿 Release。
+# Obsidian 按 manifest 里的版本号找 Release，所以 Release 的标签不带 v（如 0.6.0），与 v 标签指向同一个提交。
+# 草稿要在 GitHub 上手动点“发布”才会公开。
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 公开内容检查
+        run: node scripts/check-public.mjs
+      - name: 上架检查
+        run: node scripts/release-check.mjs "${GITHUB_REF_NAME}"
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - name: 建草稿 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$version" dist/main.js dist/manifest.json dist/styles.css \
+            --target "$GITHUB_SHA" --title "$version" --draft --generate-notes
