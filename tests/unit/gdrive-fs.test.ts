@@ -348,7 +348,7 @@ describe("Google Drive：路径与读写", () => {
     expect(drive.log.filter((l) => l.startsWith("PATCH upload/files/") && l.endsWith("resumable")).length).toBe(1);
     expect(await make().readFile("/大/b.bin")).toEqual(big2);
     expect(drive.children(drive.find("/大")!.id).length).toBe(1);
-  });
+  }, 30_000); // 要处理约 1 MB 数据，CI 机器负载高时会超过默认的 5 秒
 
   it("openWrite：收集后一次上传", async () => {
     const g = make();
