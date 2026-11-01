@@ -138,7 +138,8 @@ body.theme-dark {
 .mb-modal-footer .setting-item-control { width: 100%; }
 
 /* —— 同步历史 —— */
-.mb-history { display: flex; flex-direction: column; padding: 0 !important; }
+.mb-history { display: flex; flex-direction: column; }
+.workspace-leaf-content > .view-content.mb-history { padding: 0; }
 .mb-history-filters { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--background-modifier-border); }
 .mb-history-filters select { flex: 1; min-width: 0; }
 .mb-seg { display: inline-flex; border-radius: var(--radius-s); overflow: hidden; box-shadow: inset 0 0 0 1px var(--background-modifier-border); }
@@ -336,7 +337,7 @@ body.is-mobile .mb-secret.setting-item .setting-item-control > button { width: a
 .mb-guide-mark { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--text-faint); display: grid; place-items: center; }
 .mb-guide-task.is-done .mb-guide-mark { background: var(--interactive-accent); border-color: var(--interactive-accent); color: var(--text-on-accent); }
 .mb-guide-mark .svg-icon { width: 12px; height: 12px; stroke-width: 3; }
-.mb-guide-task.is-done .mb-guide-name { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--text-faint); }
+.mb-guide-task.is-done .mb-guide-name { color: var(--text-muted); }
 .mb-guide-desc { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 .mb-guide-optional { font-size: var(--font-ui-smaller); color: var(--text-muted); border: 1px solid var(--background-modifier-border); border-radius: 9px; padding: 0 6px; margin-left: 6px; }
 .mb-guide-done { display: flex; gap: var(--size-4-2); align-items: center; }
@@ -375,9 +376,9 @@ body.is-mobile .mb-secret.setting-item .setting-item-control > button { width: a
 
 /* 手机窄屏（M6-5 截图时发现）：自动同步的数字输入框不被说明文字挤小，带输入框的行把控件放到说明下面；只有一句话的计划行不用三列网格 */
 .mb-auto-triggers .setting-item-control input.mb-number { width: 4.5em; min-width: 4.5em; max-width: 4.5em; flex: none; }
-.is-mobile .mb-trigger:has(.mb-number), .is-mobile .mb-trigger:has(input[type="time"]) { flex-wrap: wrap; }
-.is-mobile .mb-trigger:has(.mb-number) .setting-item-info, .is-mobile .mb-trigger:has(input[type="time"]) .setting-item-info { flex: 1 1 100%; }
-.is-mobile .mb-trigger:has(.mb-number) .setting-item-control, .is-mobile .mb-trigger:has(input[type="time"]) .setting-item-control { flex: 1 1 100%; justify-content: flex-end; }
+.is-mobile .mb-trigger-input { flex-wrap: wrap; }
+.is-mobile .mb-trigger-input .setting-item-info { flex: 1 1 100%; }
+.is-mobile .mb-trigger-input .setting-item-control { flex: 1 1 100%; justify-content: flex-end; }
 .is-mobile .mb-trigger input[type="time"] { width: auto; flex: none; }
 .mb-plan-row.is-text { display: block; }
 

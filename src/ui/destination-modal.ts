@@ -171,14 +171,14 @@ export class DestinationModal extends Modal {
     const num = (input: HTMLInputElement, value: number, min: number, max: number, set: (n: number) => void) => numberInput(input, value, min, max, set);
 
     const interval = new Setting(triggers).setName(t("modal.auto.interval"));
-    interval.settingEl.addClass("mb-trigger");
+    interval.settingEl.addClass("mb-trigger", "mb-trigger-input");
     interval.controlEl.createSpan({ text: t("modal.auto.every"), cls: "mb-unit" });
     interval.addText((c) => num(c.inputEl, a.interval.minutes, 1, 1440, (n) => (a.interval.minutes = n)));
     interval.controlEl.createSpan({ text: t("modal.auto.minutes"), cls: "mb-unit" });
     interval.addToggle((c) => c.setValue(a.interval.on).onChange((v) => (a.interval.on = v)));
 
     const edit = new Setting(triggers).setName(t("modal.auto.afterEdit")).setDesc(t("modal.auto.afterEditDesc"));
-    edit.settingEl.addClass("mb-trigger");
+    edit.settingEl.addClass("mb-trigger", "mb-trigger-input");
     edit.controlEl.createSpan({ text: t("modal.auto.idleFor"), cls: "mb-unit" });
     edit.addText((c) => num(c.inputEl, a.afterEdit.seconds, 5, 3600, (n) => (a.afterEdit.seconds = n)));
     edit.controlEl.createSpan({ text: t("modal.auto.seconds"), cls: "mb-unit" });
@@ -189,7 +189,7 @@ export class DestinationModal extends Modal {
     startup.addToggle((c) => c.setValue(a.onStartup).onChange((v) => (a.onStartup = v)));
 
     const daily = new Setting(triggers).setName(t("modal.auto.daily"));
-    daily.settingEl.addClass("mb-trigger");
+    daily.settingEl.addClass("mb-trigger", "mb-trigger-input");
     daily.addText((c) => {
       c.inputEl.type = "time";
       c.setValue(a.daily.time).onChange((v) => {

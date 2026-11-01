@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -29,6 +31,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      - name: 生成来源证明
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/main.js
+            dist/manifest.json
+            dist/styles.css
       - name: 建草稿 Release
         env:
           GH_TOKEN: ${{ github.token }}

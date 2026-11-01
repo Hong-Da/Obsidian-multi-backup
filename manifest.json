@@ -1,7 +1,7 @@
 {
   "id": "multi-backup",
   "name": "Multi Backup",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "minAppVersion": "1.11.4",
   "description": "Back up your vault to local folders, Git hosts, WebDAV, S3 and cloud drives, with optional two-way sync through one primary destination.",
   "author": "Hong-Da",
