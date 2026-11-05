@@ -77,7 +77,7 @@ From top to bottom:
 | S3-compatible storage | AWS S3, Cloudflare R2, MinIO, Alibaba OSS and others | Needs an access key |
 | Dropbox | An existing Dropbox account | Sign in through the browser; backups go to Dropbox's Apps folder |
 
-Every destination's edit dialog has **Test connection**. Tokens and passwords live only in this device's secret storage, so each device picks them once.
+Every destination's edit dialog has **Test connection**. Below the token, password or access key there is a **How to get** card with steps for the selected platform or provider, a button that opens the page where you create it, and for S3 a policy limited to this bucket that you can copy. It opens by itself when you add a destination. Tokens and passwords live only in this device's secret storage, so each device picks them once.
 
 <img src="images/en/destination.png" width="270" alt="Editing a destination">
 

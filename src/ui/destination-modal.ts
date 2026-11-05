@@ -4,6 +4,7 @@ import { DestinationError } from "../core/errors";
 import { sizeLabel, whenLabel } from "../core/format";
 import { commitMessage, conflictsWithVault, snapshotFileName } from "../core/paths";
 import { currentLocale, t } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { canPickFolder, pickFolder, vaultBasePath } from "../platform/desktop";
 import {
   CLOUD_NAMES,
@@ -31,6 +32,8 @@ import { destWhere, errorText } from "./messages";
 import { cloudConfigured } from "../destinations/cloud-providers";
 import type { DeviceCode } from "../core/oauth";
 import { addSecretSetting } from "./secret-field";
+import { renderKeyGuide, type KeyGuideOptions } from "./key-guide";
+import { gitHostTokenUrl, nextcloudSecurityUrl } from "../core/key-guide";
 
 /** 各类型弹窗的文案键 */
 const TEXT = {
@@ -50,7 +53,8 @@ export class DestinationModal extends Modal {
   private resultEl!: HTMLElement;
   private folderError!: HTMLElement;
   private saveBtn: HTMLButtonElement | null = null;
-  private guideOpen = false;
+  /** 密钥指导是否展开；null 表示还没决定（第一次画时按“新建且没选密钥”决定） */
+  private guideOpen: boolean | null = null;
   /** 网盘：正在浏览器里登录；Google 的设备代码 */
   private signing = false;
   private device: DeviceCode | null = null;
@@ -281,18 +285,28 @@ export class DestinationModal extends Modal {
       value: d.tokenSecret,
       onChange: (v) => (d.tokenSecret = v),
     });
-    const steps = { github: 4, gitee: 3, other: 3 }[d.provider];
-    const guide = el.createDiv({ cls: "mb-token-guide" });
-    const ol = guide.createEl("ol");
-    for (let i = 1; i <= steps; i++) ol.createEl("li", { text: t(`modal.token.${d.provider}.${i}` as "modal.token.github.1") });
-    guide.toggle(this.guideOpen);
-    token.descEl.appendText(" ");
-    const link = token.descEl.createEl("a", { text: t(this.guideOpen ? "modal.token.hide" : "modal.token.howto"), href: "#" });
+    const id = ({ github: "github", gitee: "gitee", other: "gitOther" } as const)[d.provider];
+    this.keyGuide(token, "modal.token.howto", d.tokenSecret, { id, field: t("modal.token.name"), url: () => gitHostTokenUrl(d.url) });
+  }
+
+  /**
+   * 密钥那一行下面的“如何获取”指导卡片。新建目的地且还没选密钥时自动展开，
+   * 其余情况收起；展开状态在切换服务商重画后保持。
+   */
+  private keyGuide(setting: Setting, howto: MessageKey, value: string, o: KeyGuideOptions): void {
+    if (this.guideOpen === null) this.guideOpen = this.isNew && !value;
+    const card = renderKeyGuide(createDiv(), o);
+    setting.settingEl.after(card);
+    setting.settingEl.toggleClass("mb-has-guide", this.guideOpen);
+    card.toggle(this.guideOpen);
+    setting.descEl.appendText(" ");
+    const link = setting.descEl.createEl("a", { text: t(this.guideOpen ? "modal.token.hide" : howto), href: "#" });
     link.addEventListener("click", (e) => {
       e.preventDefault();
       this.guideOpen = !this.guideOpen;
-      guide.toggle(this.guideOpen);
-      link.setText(t(this.guideOpen ? "modal.token.hide" : "modal.token.howto"));
+      card.toggle(this.guideOpen);
+      setting.settingEl.toggleClass("mb-has-guide", this.guideOpen);
+      link.setText(t(this.guideOpen ? "modal.token.hide" : howto));
     });
   }
 
@@ -318,11 +332,6 @@ export class DestinationModal extends Modal {
             this.rerender();
           }),
       );
-    if (d.preset !== "other") {
-      const ol = el.createDiv({ cls: "mb-token-guide" }).createEl("ol");
-      for (const i of [1, 2]) ol.createEl("li", { text: t(`modal.dav.help.${d.preset}.${i}` as "modal.dav.help.jianguo.1") });
-      if (d.preset === "alist") ol.createEl("li").createEl("a", { text: t("modal.dav.help.alistGuide"), href: ALIST_GUIDE });
-    }
     const placeholders: Record<WebDavPreset, string> = {
       jianguo: "https://dav.jianguoyun.com/dav/",
       nextcloud: "https://cloud.example.com/remote.php/dav/files/USER/",
@@ -340,7 +349,14 @@ export class DestinationModal extends Modal {
       c.setPlaceholder(d.preset === "jianguo" ? "me@example.com" : "").setValue(d.username).onChange((v) => (d.username = v));
       c.inputEl.addClass("mb-mono");
     });
-    addSecretSetting(el, this.app, { name: t("modal.password.name"), desc: t("modal.password.desc"), value: d.passwordSecret, onChange: (v) => (d.passwordSecret = v) });
+    const password = addSecretSetting(el, this.app, { name: t("modal.password.name"), desc: t("modal.password.desc"), value: d.passwordSecret, onChange: (v) => (d.passwordSecret = v) });
+    const davId = ({ jianguo: "jianguo", nextcloud: "nextcloud", alist: "alist", other: "davOther" } as const)[d.preset];
+    this.keyGuide(password, "modal.password.howto", d.passwordSecret, {
+      id: davId,
+      field: t("modal.password.name"),
+      url: d.preset === "nextcloud" ? () => nextcloudSecurityUrl(d.url) : undefined,
+      docUrl: d.preset === "alist" ? ALIST_GUIDE : undefined,
+    });
     new Setting(el)
       .setName(t("modal.dav.folder.name"))
       .setDesc(t("modal.dav.folder.desc"))
@@ -383,7 +399,8 @@ export class DestinationModal extends Modal {
     text(new Setting(el).setName(t("modal.s3.bucket.name")), d.bucket, (v) => (d.bucket = v), "notes-backup");
     text(new Setting(el).setName(t("modal.s3.prefix.name")).setDesc(t("modal.s3.prefix.desc")), d.prefix, (v) => (d.prefix = v), "obsidian");
     text(new Setting(el).setName(t("modal.s3.keyId.name")), d.accessKeyId, (v) => (d.accessKeyId = v));
-    addSecretSetting(el, this.app, { name: t("modal.s3.secret.name"), desc: t("modal.s3.secret.desc"), value: d.secretKeySecret, onChange: (v) => (d.secretKeySecret = v) });
+    const secret = addSecretSetting(el, this.app, { name: t("modal.s3.secret.name"), desc: t("modal.s3.secret.desc"), value: d.secretKeySecret, onChange: (v) => (d.secretKeySecret = v) });
+    this.keyGuide(secret, "modal.s3.secret.howto", d.secretKeySecret, { id: d.preset, field: t("modal.s3.secret.name"), bucket: () => d.bucket, region: () => d.region });
     new Setting(el)
       .setName(t("modal.s3.pathStyle.name"))
       .setDesc(t("modal.s3.pathStyle.desc"))

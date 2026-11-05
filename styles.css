@@ -192,6 +192,28 @@ body.theme-dark {
 .mb-token-guide ol { margin: 0; padding-left: 18px; }
 .mb-token-guide li { margin: 2px 0; }
 
+/* 创建密钥的指导：紧贴在密钥那一行下面 */
+.setting-item.mb-has-guide { border-bottom: 0; }
+.mb-key-guide { margin: 0 0 var(--size-4-3); padding: var(--size-4-3) var(--size-4-3) var(--size-4-2); border-radius: var(--radius-m); background: var(--background-secondary); font-size: var(--font-ui-small); color: var(--text-normal); }
+.mb-key-guide-head { display: flex; align-items: center; gap: var(--size-4-2); margin-bottom: var(--size-4-2); }
+.mb-key-guide-icon { display: flex; color: var(--text-muted); }
+.mb-key-guide-icon svg { width: 15px; height: 15px; }
+.mb-key-guide-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--size-4-2); }
+.mb-key-guide-fact { display: inline-flex; align-items: center; gap: 5px; font-size: var(--font-ui-smaller); padding: 2px 8px; border-radius: 10px; background: var(--background-primary); color: var(--text-muted); }
+.mb-key-guide-fact.is-warning { color: var(--text-warning); }
+.mb-key-guide-fact-icon { display: flex; }
+.mb-key-guide-fact-icon svg { width: 12px; height: 12px; }
+.mb-key-guide ol { margin: 0; padding-left: 20px; }
+.mb-key-guide li { margin: 3px 0; line-height: 1.5; overflow-wrap: anywhere; }
+.mb-key-guide li.mb-key-guide-final { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--background-modifier-border); }
+.mb-key-guide code { font-size: var(--font-ui-smaller); padding: 0 4px; border-radius: var(--radius-s); background: var(--background-primary); }
+.mb-key-guide-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); margin: 6px 0 2px; }
+.mb-key-guide-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.mb-key-guide-actions .mb-btn-icon { display: flex; }
+.mb-key-guide-actions .mb-btn-icon svg { width: 14px; height: 14px; }
+.mb-key-guide-show { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.mb-key-guide-policy { margin: 6px 0 0; padding: 8px 10px; border-radius: var(--radius-s); background: var(--background-primary); font-size: var(--font-ui-smaller); max-height: 160px; overflow: auto; user-select: text; }
+
 /* 令牌设置项：密钥名显示在圆点左边；手机上按钮不要撑满整行 */
 .mb-secret .setting-item-control { flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 8px; }
 .mb-secret .mb-secret-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-monospace); font-size: var(--font-ui-small); color: var(--text-normal); }
