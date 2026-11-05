@@ -380,6 +380,23 @@ body.is-mobile .mb-secret.setting-item .setting-item-control > button { width: a
 .is-mobile .mb-trigger-input .setting-item-info { flex: 1 1 100%; }
 .is-mobile .mb-trigger-input .setting-item-control { flex: 1 1 100%; justify-content: flex-end; }
 .is-mobile .mb-trigger input[type="time"] { width: auto; flex: none; }
+
+/* 每天固定时间：Obsidian 没有给时间输入框加样式，补成和文本输入框一样 */
+.mb-trigger input[type="time"] {
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  background: var(--background-modified-form-field);
+  border: var(--input-border-width) solid var(--background-modifier-border);
+  border-radius: var(--input-radius);
+  height: var(--input-height);
+  padding: 0 var(--size-4-2);
+  box-shadow: none;
+}
+.mb-trigger input[type="time"]:hover { border-color: var(--background-modifier-border-hover); }
+.mb-trigger input[type="time"]:focus, .mb-trigger input[type="time"]:focus-visible { outline: none; border-color: var(--background-modifier-border-focus); box-shadow: 0 0 0 2px var(--background-modifier-border-focus); }
+.mb-trigger input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+.theme-dark .mb-trigger input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 .mb-plan-row.is-text { display: block; }
 
 /* 同步历史侧栏（M6-5 桌面检查）：顶部操作按钮；桌面端底部给状态栏留位置；长路径换行 */
