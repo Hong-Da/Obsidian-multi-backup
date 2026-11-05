@@ -25,6 +25,7 @@ import { WebDavFs } from "./destinations/webdav-fs";
 import { cloudFs } from "./destinations/cloud-fs";
 import { cloudConfigured } from "./destinations/cloud-providers";
 import type { CloudAuth } from "./platform/cloud-auth";
+import { GithubAuth } from "./platform/github-auth";
 import type { FileStore, PrimaryStore, SnapshotStore, TestInfo } from "./destinations/types";
 import { t, tn } from "./i18n";
 import { adapterGitFs } from "./platform/adapter-git-fs";
@@ -40,10 +41,12 @@ import {
   CLOUD_NAMES,
   cloudFolder,
   cloudSecretName,
+  githubSecretName,
   isRemote,
   mergeSettings,
   portableSettings,
   splitRules,
+  usesGithubApp,
   type CloudConfig,
   type DestinationConfig,
   type GitRemoteConfig,
@@ -149,6 +152,13 @@ export class SyncService extends Events {
     return this.ctx.cloud;
   }
 
+  private github: GithubAuth | null = null;
+
+  /** 用 GitHub 登录 */
+  get githubAuth(): GithubAuth {
+    return (this.github ??= new GithubAuth(this.ctx.app, obsidianRequest, this.ctx.logger));
+  }
+
   /** 当前的主同步端（已启用、类型支持） */
   primaryConfig(): DestinationConfig | null {
     const s = this.ctx.settings();
@@ -187,7 +197,10 @@ export class SyncService extends Events {
       url: cfg.url.trim(),
       branch: cfg.branch.trim() || "main",
       username: cfg.provider === "github" ? "" : cfg.username.trim(),
-      token: new ObsidianSecrets(this.ctx.app, this.ctx.logger).get(cfg.tokenSecret) ?? "",
+      token: usesGithubApp(cfg)
+        ? (this.githubAuth.load(githubSecretName(cfg.id))?.token ?? "")
+        : (new ObsidianSecrets(this.ctx.app, this.ctx.logger).get(cfg.tokenSecret) ?? ""),
+      signedIn: usesGithubApp(cfg),
       vaultName: this.ctx.app.vault.getName(),
       message: cfg.commitMessage,
       author: { name: cfg.authorName, email: cfg.authorEmail },
@@ -432,6 +445,7 @@ export class SyncService extends Events {
     const secretOf = (d: DestinationConfig) => (d.type === "git-remote" ? d.tokenSecret : d.type === "webdav" ? d.passwordSecret : d.type === "s3" ? d.secretKeySecret : "");
     const needs = (d: DestinationConfig) => {
       if (d.type === "cloud") return !this.ctx.cloud.load(cloudSecretName(d.id));
+      if (usesGithubApp(d)) return !this.githubAuth.load(githubSecretName(d.id));
       const name = secretOf(d);
       if (d.type === "git-remote" || d.type === "s3") return !name || !secrets.get(name);
       return d.type === "webdav" && !!name && !secrets.get(name);

@@ -10,6 +10,7 @@ import {
   CLOUD_NAMES,
   cloudFolder,
   cloudSecretName,
+  githubSecretName,
   isRemote,
   newDestination,
   type CloudConfig,
@@ -17,6 +18,7 @@ import {
   WEBDAV_PRESETS,
   type DestinationConfig,
   type DestinationType,
+  type GitAuthMode,
   type GitConfig,
   type GitProvider,
   type GitRemoteConfig,
@@ -32,7 +34,8 @@ import { destWhere, errorText } from "./messages";
 import { cloudConfigured } from "../destinations/cloud-providers";
 import type { DeviceCode } from "../core/oauth";
 import { addSecretSetting } from "./secret-field";
-import { renderKeyGuide, type KeyGuideOptions } from "./key-guide";
+import { renderKeyGuide, richText, type KeyGuideOptions } from "./key-guide";
+import { GITHUB_INSTALL_URL, githubRepo, type RepoAccess } from "../core/github-app";
 import { gitHostTokenUrl, nextcloudSecurityUrl } from "../core/key-guide";
 
 /** 各类型弹窗的文案键 */
@@ -60,6 +63,9 @@ export class DestinationModal extends Modal {
   private device: DeviceCode | null = null;
   private signError = "";
   private saved = false;
+  /** 用 GitHub 登录：仓库检查结果；null 表示还没检查 */
+  private ghAccess: RepoAccess | "checking" | "failed" | null = null;
+  private ghAccessError = "";
 
   constructor(
     app: App,
@@ -279,6 +285,21 @@ export class DestinationModal extends Modal {
           c.inputEl.addClass("mb-mono");
         });
     }
+    if (d.provider === "github") {
+      const mode = new Setting(el).setName(t("modal.ghAuth.name"));
+      if (d.auth === "app") mode.setDesc(t("modal.ghAuth.appDesc"));
+      const seg = mode.controlEl.createDiv({ cls: "mb-seg" });
+      for (const m of ["app", "token"] as GitAuthMode[]) {
+        const b = seg.createEl("button", { text: t(m === "app" ? "modal.ghAuth.app" : "modal.ghAuth.token") });
+        b.setAttr("aria-pressed", String(d.auth === m));
+        b.addEventListener("click", () => {
+          if (d.auth === m) return;
+          d.auth = m;
+          this.rerender();
+        });
+      }
+      if (d.auth === "app") return this.githubAccount(el, d);
+    }
     const token = addSecretSetting(el, this.app, {
       name: t("modal.token.name"),
       desc: t("modal.token.desc"),
@@ -287,6 +308,128 @@ export class DestinationModal extends Modal {
     });
     const id = ({ github: "github", gitee: "gitee", other: "gitOther" } as const)[d.provider];
     this.keyGuide(token, "modal.token.howto", d.tokenSecret, { id, field: t("modal.token.name"), url: () => gitHostTokenUrl(d.url) });
+  }
+
+  /** 用 GitHub 登录（按 M6 预览页 git-signin.html）：登录 / 等待授权 / 已登录，已登录时检查仓库有没有装上应用 */
+  private githubAccount(el: HTMLElement, d: GitRemoteConfig): void {
+    const auth = this.sync.githubAuth;
+    const secret = githubSecretName(d.id);
+    const login = auth.load(secret);
+    const account = new Setting(el).setName(t("modal.cloud.account")).setDesc(t("modal.gh.accountDesc"));
+    if (login) {
+      const who = account.controlEl.createSpan({ cls: "mb-cloud-account" });
+      setIcon(who.createSpan({ cls: "mb-btn-icon" }), "check");
+      who.createSpan({ text: login.login || t("modal.cloud.signedIn") });
+      account.addButton((b) =>
+        b.setButtonText(t("modal.cloud.signOut")).onClick(() => {
+          auth.signOut(secret);
+          this.ghAccess = null;
+          this.rerender();
+        }),
+      );
+      this.repoBox(el, d);
+    } else if (this.signing) {
+      account.addButton((b) => b.setButtonText(t("modal.cloud.waiting")).setDisabled(true));
+      account.addButton((b) =>
+        b.setButtonText(t("common.cancel")).onClick(() => {
+          this.signing = false;
+          this.device = null;
+          this.rerender();
+        }),
+      );
+      if (this.device) {
+        const box = el.createDiv({ cls: "mb-token-guide mb-cloud-wait" });
+        richText(box.createDiv(), t("modal.gh.deviceStep"));
+        const code = box.createDiv({ cls: "mb-cloud-code" });
+        code.createEl("code", { text: this.device.userCode });
+        const copy = code.createEl("button", { text: t("modal.cloud.copy") });
+        copy.addEventListener("click", () => void navigator.clipboard.writeText(this.device?.userCode ?? ""));
+        const open = code.createEl("button", { text: t("modal.gh.openPage"), cls: "mod-cta" });
+        open.addEventListener("click", () => window.open(this.device?.verifyUrl));
+        box.createDiv({ text: t("modal.gh.valid"), cls: "mb-muted" });
+      }
+    } else {
+      account.addButton((b) =>
+        b
+          .setButtonText(t("modal.ghAuth.app"))
+          .setCta()
+          .onClick(() => void this.githubSignIn(d)),
+      );
+    }
+    if (this.signError) account.descEl.createDiv({ text: this.signError, cls: "mb-error-text" });
+  }
+
+  private async githubSignIn(d: GitRemoteConfig): Promise<void> {
+    const auth = this.sync.githubAuth;
+    this.signing = true;
+    this.signError = "";
+    this.device = null;
+    this.rerender();
+    try {
+      this.device = await auth.deviceCode();
+      this.rerender();
+      window.open(this.device.verifyUrl);
+      const login = await auth.wait(githubSecretName(d.id), this.device, () => !this.signing);
+      if (login) this.ghAccess = null;
+    } catch (e) {
+      if (this.signing) this.signError = e instanceof DestinationError ? errorText(e.code, "GitHub") : errorText("io", "GitHub");
+    }
+    this.signing = false;
+    this.device = null;
+    if (this.contentEl.isConnected) this.rerender();
+  }
+
+  /** 已登录：仓库能不能用，不能用时给“安装到仓库” */
+  private repoBox(el: HTMLElement, d: GitRemoteConfig): void {
+    const repo = githubRepo(d.url);
+    const name = repo ? `${repo.owner}/${repo.repo}` : "";
+    if (repo && this.ghAccess === null) void this.checkRepo(d);
+    const state = repo ? this.ghAccess : null;
+    const box = el.createDiv({ cls: "mb-gh-repo" });
+    const recheck = (row: HTMLElement) => {
+      const b = row.createEl("button", { text: t("modal.gh.recheck") });
+      b.addEventListener("click", () => void this.checkRepo(d));
+    };
+    if (state === "ok") {
+      box.addClass("is-ok");
+      setIcon(box.createSpan({ cls: "mb-btn-icon" }), "check");
+      box.createSpan({ text: t("modal.gh.ok", { repo: name }) });
+    } else if (state === "not-installed" || state === "not-found") {
+      box.addClass("is-warning");
+      const head = box.createDiv({ cls: "mb-gh-repo-head" });
+      setIcon(head.createSpan({ cls: "mb-btn-icon" }), "alert-triangle");
+      head.createEl("b", { text: t(state === "not-found" ? "modal.gh.notFound" : "modal.gh.notInstalled", { repo: name }) });
+      richText(box.createDiv({ cls: "mb-muted" }), t(state === "not-found" ? "modal.gh.notFoundDesc" : "modal.gh.notInstalledDesc"));
+      const row = box.createDiv({ cls: "mb-gh-repo-actions" });
+      if (state === "not-installed") {
+        const install = row.createEl("button", { text: t("modal.gh.install"), cls: "mod-cta" });
+        install.addEventListener("click", () => window.open(GITHUB_INSTALL_URL));
+      }
+      recheck(row);
+    } else if (state === "checking") {
+      box.createSpan({ text: t("modal.gh.checking"), cls: "mb-muted" });
+    } else {
+      const failed = state === "failed";
+      box.createDiv({ text: failed ? t("modal.gh.checkFailed", { reason: this.ghAccessError }) : t("modal.gh.needUrl"), cls: failed ? "mb-error-text" : "mb-muted" });
+      recheck(box.createDiv({ cls: "mb-gh-repo-actions" }));
+    }
+  }
+
+  private async checkRepo(d: GitRemoteConfig): Promise<void> {
+    if (!githubRepo(d.url)) {
+      this.ghAccess = null;
+      this.rerender();
+      return;
+    }
+    this.ghAccess = "checking";
+    this.rerender();
+    try {
+      this.ghAccess = (await this.sync.githubAuth.repoAccess(githubSecretName(d.id), d.url)) ?? "failed";
+    } catch (e) {
+      this.ghAccess = "failed";
+      this.ghAccessError = e instanceof DestinationError ? errorText(e.code, e.path || "GitHub") : String(e);
+    }
+    if (this.contentEl.isConnected) this.rerender();
   }
 
   /**
@@ -312,8 +455,13 @@ export class DestinationModal extends Modal {
 
   /** 选了别的服务或服务商后重画弹窗 */
   private rerender(): void {
+    // 重画后保持滚动位置，不跳回顶部
+    const modalTop = this.modalEl.scrollTop;
+    const contentTop = this.contentEl.scrollTop;
     this.contentEl.empty();
     this.onOpen();
+    this.modalEl.scrollTop = modalTop;
+    this.contentEl.scrollTop = contentTop;
   }
 
   /** WebDAV：服务、说明、地址、用户名、密码、文件夹 */
@@ -659,6 +807,7 @@ export class DestinationModal extends Modal {
     this.sync.cloudAuth.cancel();
     // 新加的网盘登录了却没保存：删掉刚存的凭据
     if (this.isNew && !this.saved && this.draft.type === "cloud") this.sync.cloudAuth.signOut(cloudSecretName(this.draft.id));
+    if (this.isNew && !this.saved && this.draft.type === "git-remote") this.sync.githubAuth.signOut(githubSecretName(this.draft.id));
     this.contentEl.empty();
   }
 }

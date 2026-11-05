@@ -54,6 +54,8 @@ export interface GitConfig extends DestinationBase {
 }
 
 export type GitProvider = "github" | "gitee" | "other";
+/** GitHub 的连接方式：app 用 GitHub 登录（插件的 GitHub App），token 手动填令牌 */
+export type GitAuthMode = "app" | "token";
 
 /** 远程 Git（GitHub / Gitee / 其他）。path 不用；令牌只存密钥名 tokenSecret，令牌本身在本机密钥存储 */
 export interface GitRemoteConfig extends DestinationBase {
@@ -64,6 +66,8 @@ export interface GitRemoteConfig extends DestinationBase {
   /** Gitee 与其他 Git 需要；GitHub 留空 */
   username: string;
   tokenSecret: string;
+  /** 只对 GitHub 有效；用 GitHub 登录时令牌存在密钥 githubSecretName(id)，tokenSecret 不用 */
+  auth: GitAuthMode;
   commitMessage: string;
   authorName: string;
   authorEmail: string;
@@ -117,6 +121,16 @@ export const CLOUD_NAMES: Record<CloudKind, string> = { onedrive: "OneDrive", dr
 /** 网盘登录凭据在本机密钥存储里的名字 */
 export function cloudSecretName(destId: string): string {
   return ("mb-oauth-" + destId).toLowerCase().replace(/[^a-z0-9-]/g, "-");
+}
+
+/** 用 GitHub 登录得到的令牌在本机密钥存储里的名字 */
+export function githubSecretName(destId: string): string {
+  return ("mb-github-" + destId).toLowerCase().replace(/[^a-z0-9-]/g, "-");
+}
+
+/** 这个 GitHub 目的地是不是用 GitHub 登录 */
+export function usesGithubApp(d: DestinationConfig): boolean {
+  return d.type === "git-remote" && d.provider === "github" && d.auth === "app";
 }
 
 /** 网盘文件夹的默认值 */
@@ -199,6 +213,7 @@ export function newDestination(type: DestinationType, kind: CloudKind = "onedriv
         branch: "main",
         username: "",
         tokenSecret: "",
+        auth: "app",
         commitMessage: "Backup {date} {time}",
         authorName: "Multi Backup",
         authorEmail: "multi-backup@localhost",
@@ -301,6 +316,8 @@ function mergeDestination(raw: unknown): DestinationConfig | null {
       branch: str(r.branch, d.branch).trim() || d.branch,
       username: str(r.username, "").trim(),
       tokenSecret: str(r.tokenSecret, ""),
+      // 早期版本没有这一项，当时只能手动填令牌
+      auth: r.auth === "app" ? "app" : "token",
       commitMessage: str(r.commitMessage, d.commitMessage) || d.commitMessage,
       authorName: str(r.authorName, d.authorName).trim() || d.authorName,
       authorEmail: str(r.authorEmail, d.authorEmail).trim() || d.authorEmail,

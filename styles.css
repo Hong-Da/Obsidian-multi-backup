@@ -346,6 +346,19 @@ body.is-mobile .mb-secret.setting-item .setting-item-control > button { width: a
 .mb-cloud-account .mb-btn-icon { color: var(--mb-ring-ok); }
 .mb-cloud-code { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .mb-cloud-code code { font-size: 1.4em; letter-spacing: 0.12em; padding: 4px 10px; }
+/* 用 GitHub 登录：连接方式切换、仓库检查结果 */
+.mb-seg { display: inline-flex; border-radius: var(--radius-s); overflow: hidden; box-shadow: inset 0 0 0 1px var(--background-modifier-border); }
+.mb-seg button { background: none; box-shadow: none; border-radius: 0; padding: 4px 10px; font-size: var(--font-ui-small); color: var(--text-muted); }
+.mb-seg button[aria-pressed="true"] { background: var(--interactive-accent); color: var(--text-on-accent); }
+.mb-muted { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.mb-cloud-wait .mb-muted { margin-top: 8px; }
+.mb-gh-repo { margin: 0 0 var(--size-4-3); padding: var(--size-4-3); border-radius: var(--radius-m); background: var(--background-secondary); font-size: var(--font-ui-small); }
+.mb-gh-repo.is-ok { display: flex; gap: 8px; align-items: center; }
+.mb-gh-repo.is-ok .mb-btn-icon { color: var(--mb-ring-ok); flex: none; }
+.mb-gh-repo.is-warning { background: rgba(var(--color-yellow-rgb), 0.14); }
+.mb-gh-repo-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.mb-gh-repo-head .mb-btn-icon { color: var(--color-orange); }
+.mb-gh-repo-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
 /* —— 首次运行指导（M6-4）—— */
 .mb-guide { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary-alt); padding: var(--size-4-3) var(--size-4-4) var(--size-4-2); margin: 0 0 var(--size-4-3); }

@@ -13,6 +13,7 @@ export type DestinationErrorCode =
   | "auth-failed" // 令牌无效或已过期（401）
   | "no-permission" // 令牌没有推送权限（403）
   | "repo-not-found" // 找不到仓库（404）
+  | "app-not-installed" // 用 GitHub 登录：应用没装到这个仓库（403 / 404）
   | "network" // 连不上服务器
   | "push-rejected" // 服务器拒绝了推送（例如分支保护、文件过大）
   | "local-changed" // 同步过程中本机文件又被编辑，跳过，下次再同步

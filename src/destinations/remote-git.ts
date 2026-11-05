@@ -54,6 +54,8 @@ export interface RemoteGitOptions {
   /** 用户名；GitHub 可以留空 */
   username: string;
   token: string;
+  /** 令牌来自“用 GitHub 登录”：出错时提示重新登录、安装应用，而不是重新生成令牌 */
+  signedIn?: boolean;
   vaultName: string;
   message: string;
   author: { name: string; email: string };
@@ -133,7 +135,7 @@ export class RemoteGit implements FileStore {
 
   async prepare(): Promise<void> {
     if (!this.o.url.trim()) throw new DestinationError("not-configured", "");
-    if (!this.o.token) throw new DestinationError("no-token", this.host());
+    if (!this.o.token) throw new DestinationError(this.o.signedIn ? "not-signed-in" : "no-token", this.o.signedIn ? "GitHub" : this.host());
     await this.wrap(async () => {
       await init({ fs: this.fs, gitdir: this.o.gitdir, bare: true, defaultBranch: this.o.branch });
       // 拉取需要 origin 的配置；地址改过时覆盖
@@ -436,7 +438,7 @@ export class RemoteGit implements FileStore {
       packfile: packfile ?? new Uint8Array(0),
     });
     if (r.ok) return true;
-    if ("status" in r) throw toRemoteError({ message: r.reason, data: { statusCode: r.status } }, this.host());
+    if ("status" in r) throw toRemoteError({ message: r.reason, data: { statusCode: r.status } }, this.host(), this.o.signedIn);
     // 被拒：远程分支已经不是推送前的那个提交，说明别处推送过
     const now = (await this.remoteHeads(true))[this.o.branch] ?? null;
     if (now !== this.base) return false;
@@ -515,17 +517,20 @@ export class RemoteGit implements FileStore {
     try {
       return await fn();
     } catch (e) {
-      throw toRemoteError(e, this.host());
+      throw toRemoteError(e, this.host(), this.o.signedIn);
     }
   }
 }
 
-export function toRemoteError(e: unknown, host: string): DestinationError {
+export function toRemoteError(e: unknown, host: string, signedIn = false): DestinationError {
   if (e instanceof DestinationError) return e;
   const err = e as { code?: string; message?: string; data?: { statusCode?: number } };
   const msg = err?.message ?? String(e);
-  if (err?.code === "UserCanceledError") return new DestinationError("auth-failed", host, msg);
   const status = err?.data?.statusCode;
+  // 用 GitHub 登录：401 是授权被取消，403 / 404 多半是应用没装到这个仓库
+  if (signedIn && (err?.code === "UserCanceledError" || status === 401)) return new DestinationError("auth-expired", "GitHub", msg);
+  if (signedIn && (status === 403 || status === 404)) return new DestinationError("app-not-installed", host, msg);
+  if (err?.code === "UserCanceledError") return new DestinationError("auth-failed", host, msg);
   if (status === 401) return new DestinationError("auth-failed", host, msg);
   if (status === 403) return new DestinationError("no-permission", host, msg);
   if (status === 404) return new DestinationError("repo-not-found", host, msg);

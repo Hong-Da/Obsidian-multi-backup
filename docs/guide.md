@@ -72,12 +72,14 @@ From top to bottom:
 | Local folder mirror | An external or second drive | Desktop only; keeps a copy identical to the vault |
 | Zip snapshots | Keeping dated versions | Desktop only; choose how many to keep and for how long |
 | Local Git repository | Recording every change with Git | Desktop only |
-| GitHub / Gitee / any Git host | Online backup and multi-device sync | Needs an account and token; every sync is a commit you can browse on the website |
+| GitHub / Gitee / any Git host | Online backup and multi-device sync | GitHub can sign in with your account; other hosts need a token. Every sync is a commit you can browse on the website |
 | WebDAV | Jianguoyun, Nextcloud, other drives through [Alist](alist.md) | Needs the address, user name and password (an app password for Jianguoyun) |
 | S3-compatible storage | AWS S3, Cloudflare R2, MinIO, Alibaba OSS and others | Needs an access key |
 | Dropbox | An existing Dropbox account | Sign in through the browser; backups go to Dropbox's Apps folder |
 
 Every destination's edit dialog has **Test connection**. Below the token, password or access key there is a **How to get** card with steps for the selected platform or provider, a button that opens the page where you create it, and for S3 a policy limited to this bucket that you can copy. It opens by itself when you add a destination. Tokens and passwords live only in this device's secret storage, so each device picks them once.
+
+GitHub defaults to **Sign in with GitHub**: the plugin shows a code, you open github.com/login/device in your browser, enter it and authorize. This goes through the plugin's GitHub app Obsidian Multi Backup, which can only reach repositories you install it on, with read/write access to repository contents only. After sign-in the plugin checks that the app is installed on this repository; if not, click **Install on repository**, choose **Only select repositories** and pick the backup repository. To manage the token yourself, set **Connect with** to **Enter a token**. The token from sign-in also stays only on this device, so sign in once on each device.
 
 <img src="images/en/destination.png" width="270" alt="Editing a destination">
 
