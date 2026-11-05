@@ -1,6 +1,6 @@
 {
   "name": "multi-backup",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Back up your vault to multiple destinations, with optional two-way sync through one primary destination.",
   "private": true,
   "type": "module",
