@@ -4,7 +4,7 @@
 // 同步中途退出时，已经写进工作区的文件还没提交。为此第一次改动工作区前先在 .git 里放一个标记文件，
 // 提交成功后删除；下次同步发现标记还在，就把工作区的全部变化补提交。
 
-import { add, commit, init, log, remove, resolveRef, statusMatrix, type PromiseFsClient } from "isomorphic-git";
+import { add, commit, currentBranch, init, listBranches, log, remove, resolveRef, statusMatrix, type PromiseFsClient } from "isomorphic-git";
 import { DestinationError, toDestinationError } from "../core/errors";
 import { commitMessage } from "../core/paths";
 import type { RestoreSource } from "../core/restore";
@@ -162,6 +162,13 @@ export class LocalGit implements FileStore {
         if (!(await this.fs.stat(this.gitdir))) return null;
         return resolveRef({ fs: this.gitFs, gitdir: this.gitdir, ref: "HEAD" }).catch(() => null);
       },
+      branch: async () => {
+        if (!(await this.fs.stat(this.gitdir))) return null;
+        return (await currentBranch({ fs: this.gitFs, gitdir: this.gitdir }).catch(() => null)) ?? null;
+      },
+      branches: async () => ((await this.fs.stat(this.gitdir)) ? listBranches({ fs: this.gitFs, gitdir: this.gitdir }) : []),
+      // 只读取另一个分支的提交，不切换工作区
+      other: (name) => ({ head: () => resolveRef({ fs: this.gitFs, gitdir: this.gitdir, ref: `refs/heads/${name}` }).catch(() => null) }),
     });
   }
 

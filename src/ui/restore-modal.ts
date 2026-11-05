@@ -1,6 +1,6 @@
 // 从备份恢复（按 M4 预览页 restore.html 实现）：1 选择目的地和版本 → 2 选择范围 → 3 预览并恢复。
 // 只把备份里的文件写回本机，不改动任何目的地。
-import { Modal, setIcon, type App } from "obsidian";
+import { DropdownComponent, Modal, setIcon, type App } from "obsidian";
 import { DestinationError } from "../core/errors";
 import { whenLabel } from "../core/format";
 import type { RestorePlan, RestorePoint, RestoreSource } from "../core/restore";
@@ -33,6 +33,11 @@ export class RestoreModal extends Modal {
   private step: 1 | 2 | 3 = 1;
   private dest: DestinationConfig | null = null;
   private src: RestoreSource | null = null;
+  /** 目的地设置里那个分支的来源；切换分支时从它派生 */
+  private base: RestoreSource | null = null;
+  /** Git 仓库里的分支，第一个是设置里的分支；不是 Git 或读不到时为空 */
+  private branches: string[] = [];
+  private branch = "";
   private points: RestorePoint[] = [];
   private limit = PAGE;
   private point: RestorePoint | null = null;
@@ -91,6 +96,9 @@ export class RestoreModal extends Modal {
     const my = ++this.ticket;
     this.dest = d;
     this.src = null;
+    this.base = null;
+    this.branches = [];
+    this.branch = "";
     this.points = [];
     this.point = null;
     this.limit = PAGE;
@@ -100,8 +108,12 @@ export class RestoreModal extends Modal {
     try {
       const src = await this.sync.restoreSource(d);
       const points = await src.points(this.limit);
+      // 读不到分支列表时不显示分支选择，照常恢复设置里的分支
+      const branches = (await src.branches?.().catch(() => [])) ?? [];
       if (my !== this.ticket) return;
-      this.src = src;
+      this.src = this.base = src;
+      this.branches = branches;
+      this.branch = branches[0] ?? "";
       this.points = points;
       this.point = points[0] ?? null;
     } catch (e) {
@@ -110,6 +122,58 @@ export class RestoreModal extends Modal {
     }
     this.loading = false;
     this.render();
+  }
+
+  /** 读取另一个分支的提交：只读，不改目的地设置 */
+  private async pickBranch(name: string): Promise<void> {
+    if (!this.base?.onBranch) return;
+    const my = ++this.ticket;
+    this.branch = name;
+    this.src = this.base.onBranch(name);
+    this.points = [];
+    this.point = null;
+    this.limit = PAGE;
+    this.loadError = "";
+    this.loading = true;
+    this.render();
+    try {
+      const points = await this.src.points(this.limit);
+      if (my !== this.ticket) return;
+      this.points = points;
+      this.point = points[0] ?? null;
+    } catch (e) {
+      if (my !== this.ticket) return;
+      const reason = e instanceof DestinationError ? errorText(e.code, e.path) : errorText("io");
+      this.loadError = t("restore.branchFailed", { branch: name, reason });
+    }
+    this.loading = false;
+    this.render();
+  }
+
+  /** 选的不是设置里的分支 */
+  private get onOther(): boolean {
+    return this.branches.length > 0 && this.branch !== this.branches[0];
+  }
+
+  /** 提交列表上方的分支行；只有一个分支时不显示 */
+  private branchRow(body: HTMLElement): void {
+    if (this.branches.length < 2 || !this.base?.onBranch) return;
+    const row = createDiv({ cls: "mb-restore-branch" });
+    body.before(row);
+    setIcon(row.createSpan({ cls: "mb-restore-icon" }), "git-branch");
+    row.createSpan({ text: t("restore.branch") });
+    new DropdownComponent(row)
+      .addOptions(Object.fromEntries(this.branches.map((b) => [b, b])))
+      .setValue(this.branch)
+      .onChange((v) => void this.pickBranch(v));
+    // 本地 Git 没有分支设置，读的是仓库当前的分支
+    if (!this.onOther) row.createSpan({ text: t(this.dest?.type === "git" ? "restore.branchCurrent" : "restore.branchDefault"), cls: "mb-restore-hint" });
+    else if (!this.loading && !this.loadError) {
+      const tip = createDiv({ cls: "mb-restore-branch-tip" });
+      body.before(tip);
+      setIcon(tip.createSpan({ cls: "mb-restore-icon" }), "alert-triangle");
+      tip.createSpan({ text: t("restore.branchTip", { branch: this.branch, current: this.branches[0] ?? "" }) });
+    }
   }
 
   private async more(): Promise<void> {
@@ -151,8 +215,16 @@ export class RestoreModal extends Modal {
     }
     const mode = this.src?.mode;
     const right = pane(cols, t(mode === "snapshots" ? "restore.pickSnapshot" : mode === "current" ? "restore.pickCurrent" : "restore.pickCommit"));
-    if (this.loading && !this.points.length) right.createDiv({ text: t("restore.loading"), cls: "mb-restore-empty" });
-    else if (this.loadError) right.createDiv({ text: this.loadError, cls: "mb-restore-empty mod-warning" });
+    this.branchRow(right);
+    if (this.loading && !this.points.length) {
+      if (this.onOther) {
+        const box = right.createDiv({ text: t("restore.branchLoading", { branch: this.branch }), cls: "mb-restore-empty" });
+        if (this.dest?.type === "git-remote") box.createEl("small", { text: t("restore.branchFirst") });
+      } else right.createDiv({ text: t("restore.loading"), cls: "mb-restore-empty" });
+    } else if (this.loadError) {
+      const box = right.createDiv({ text: this.loadError, cls: "mb-restore-empty mod-warning" });
+      if (this.onOther) box.createDiv().createEl("button", { text: t("restore.retry") }).addEventListener("click", () => void this.pickBranch(this.branch));
+    }
     else if (!this.points.length) right.createDiv({ text: t("restore.noVersions"), cls: "mb-restore-empty" });
     for (const p of this.points) {
       const item = right.createDiv({ cls: ["mb-restore-item", p === this.point ? "is-active" : ""].filter(Boolean) });
@@ -188,7 +260,8 @@ export class RestoreModal extends Modal {
 
   private pointLabel(): string {
     if (!this.point) return "";
-    return this.point.short ? `${this.pointWhen(this.point)} · ${this.point.short}` : this.pointWhen(this.point);
+    const label = this.point.short ? `${this.pointWhen(this.point)} · ${this.point.short}` : this.pointWhen(this.point);
+    return this.onOther ? t("restore.onBranch", { branch: this.branch, point: label }) : label;
   }
 
   // —— 第 2 步：范围 ——
@@ -402,7 +475,7 @@ export class RestoreModal extends Modal {
           }
         : null,
       n ? tn("restore.go", n) : t("restore.nothing"),
-      t("restore.help"),
+      this.onOther ? t("restore.helpBranch", { current: this.branches[0] ?? "" }) : t("restore.help"),
     );
   }
 

@@ -23,6 +23,7 @@ import {
   readBlob,
   readCommit,
   readTree,
+  resolveRef,
   writeBlob,
   writeCommit,
   writeRef,
@@ -482,33 +483,44 @@ export class RemoteGit implements FileStore {
   /** 作为恢复来源：同步用的是只取最新提交的浅克隆，查看更早的提交时按需加深 */
   restoreSource(): RestoreSource {
     let ready: Promise<void> | null = null;
+    const prepared = () => (ready ??= this.prepare());
+    const fetchBranch = (ref: string, depth: number) =>
+      fetch({
+        fs: this.fs,
+        http: this.http,
+        gitdir: this.o.gitdir,
+        remote: "origin",
+        ref,
+        singleBranch: true,
+        depth,
+        tags: false,
+        onAuth: this.onAuth,
+        onAuthFailure: this.onAuthFailure,
+        cache: this.cache,
+      });
     return gitRestoreSource({
       fs: this.fs,
       gitdir: this.o.gitdir,
       wrap: (fn) => this.wrap(fn),
       head: async () => {
-        ready ??= this.prepare();
-        await ready;
+        await prepared();
         return this.base;
       },
       ensureDepth: async (n) => {
-        ready ??= this.prepare();
-        await ready;
+        await prepared();
         if (!this.base || n <= 1) return;
-        await fetch({
-          fs: this.fs,
-          http: this.http,
-          gitdir: this.o.gitdir,
-          remote: "origin",
-          ref: this.o.branch,
-          singleBranch: true,
-          depth: n,
-          tags: false,
-          onAuth: this.onAuth,
-          onAuthFailure: this.onAuthFailure,
-          cache: this.cache,
-        });
+        await fetchBranch(this.o.branch, n);
       },
+      branch: async () => this.o.branch,
+      branches: async () => Object.keys(await this.remoteHeads(false)),
+      // 其他分支：选了才下载，放在 refs/remotes/origin/ 下，不碰同步用的分支
+      other: (name) => ({
+        ensureDepth: async (n) => {
+          await prepared();
+          await fetchBranch(name, n);
+        },
+        head: () => resolveRef({ fs: this.fs, gitdir: this.o.gitdir, ref: `refs/remotes/origin/${name}` }).catch(() => null),
+      }),
     });
   }
 

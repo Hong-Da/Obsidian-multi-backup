@@ -1,6 +1,7 @@
 // 恢复：计划、执行、撤销，以及镜像、zip、本地 git 三种恢复来源
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as nodeFs from "node:fs";
+import { branch } from "isomorphic-git";
 import { builtinRules, ExcludeMatcher } from "../../src/core/exclude";
 import { executeRestore, hashOf, planRestore, scopeMatcher, undoRestore, type LocalFileInfo, type RestoreRecord } from "../../src/core/restore";
 import { runBackup } from "../../src/core/sync";
@@ -150,5 +151,23 @@ describe("恢复来源", () => {
     expect((await src.fileVersions("n.md", 10)).map((v) => v.pointId)).toEqual(pts.map((p) => p.id));
     // x/y.md 只在第一次提交里变化过
     expect((await src.fileVersions("x/y.md", 10)).map((v) => v.pointId)).toEqual([pts[1]!.id]);
+  });
+
+  it("本地 git：列出分支，读取另一个分支的提交，不切换工作区", async () => {
+    const root = path.join(tmp.dir, "repo");
+    await fs.mkdir(root);
+    const make = () => new LocalGit(nodeTargetFs(), nodeFs, { root, vaultName: "V", message: "Backup {date} {time}", author: { name: "t", email: "t@t" }, now: () => clock });
+    await twoBackups(make);
+    const src = make().restoreSource();
+    const pts = await src.points(10);
+    expect(await src.branches?.()).toEqual(["main"]);
+    await branch({ fs: nodeFs, dir: root, ref: "old", object: pts[1]!.id });
+    await branch({ fs: nodeFs, dir: root, ref: "a-copy", object: pts[0]!.id });
+    expect(await src.branches?.()).toEqual(["main", "a-copy", "old"]);
+    expect(src.onBranch?.("main")).toBe(src);
+    const old = src.onBranch!("old");
+    expect((await old.points(10)).map((p) => p.id)).toEqual([pts[1]!.id]);
+    expect(dec(await old.read(pts[1]!.id, "n.md"))).toBe("第一版");
+    expect(await readText(path.join(root, "n.md"))).toBe("第二版");
   });
 });

@@ -34,6 +34,10 @@ export interface RestoreSource {
   read(pointId: string, path: string): Promise<Uint8Array>;
   /** 这个文件的各个版本，从新到旧 */
   fileVersions(path: string, limit: number): Promise<FileVersion[]>;
+  /** Git：仓库里的分支，第一个是现在读取的分支（目的地设置里的分支） */
+  branches?(): Promise<string[]>;
+  /** Git：读取另一个分支（只读，不改设置） */
+  onBranch?(name: string): RestoreSource;
 }
 
 export interface LocalFileInfo {

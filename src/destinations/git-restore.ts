@@ -11,7 +11,13 @@ export interface GitRestoreOptions {
   /** 远程 Git：确保本机至少有最近 n 个提交（浅克隆按需加深） */
   ensureDepth?(n: number): Promise<void>;
   /** 把 isomorphic-git 的错误转成 DestinationError */
-  wrap<T>(fn: () => Promise<T>): Promise<T>;
+  wrap: <T>(fn: () => Promise<T>) => Promise<T>;
+  /** 读取的分支名；还没有分支时为 null */
+  branch?: () => Promise<string | null>;
+  /** 仓库里的全部分支名 */
+  branches?: () => Promise<string[]>;
+  /** 读取另一个分支时用的 head 与 ensureDepth */
+  other?: (name: string) => Pick<GitRestoreOptions, "head" | "ensureDepth">;
 }
 
 interface Blob {
@@ -72,8 +78,23 @@ export function gitRestoreSource(o: GitRestoreOptions): RestoreSource {
     return null;
   };
 
-  return {
+  let current: string | null = null;
+  const { branch, branches, other } = o;
+  const self: RestoreSource = {
     mode: "commits",
+    branches:
+      branch && branches
+        ? () =>
+            o.wrap(async () => {
+              const [now, all] = await Promise.all([branch(), branches()]);
+              current = now;
+              const rest = all.filter((b) => b !== now).sort((a, b) => a.localeCompare(b));
+              return now ? [now, ...rest] : rest;
+            })
+        : undefined,
+    onBranch: other
+      ? (name) => (name === current ? self : gitRestoreSource({ fs: o.fs, gitdir: o.gitdir, wrap: o.wrap, ...other(name) }))
+      : undefined,
     async points(limit): Promise<RestorePoint[]> {
       return (await commits(limit)).map((c) => ({
         id: c.oid,
@@ -103,4 +124,5 @@ export function gitRestoreSource(o: GitRestoreOptions): RestoreSource {
       return out;
     },
   };
+  return self;
 }

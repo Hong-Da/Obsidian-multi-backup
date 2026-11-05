@@ -280,3 +280,42 @@ describe("远程 Git", () => {
     expect(top).toContain("objects");
   });
 });
+
+describe("远程 Git：恢复时选分支", () => {
+  /** 另一台设备备份到分支 phone：在 main 的基础上改一个文件 */
+  async function pushPhoneBranch(): Promise<void> {
+    const work = path.join(tmp.dir, "phone");
+    const g = (...args: string[]) => execFileSync("git", ["-C", work, "-c", "user.name=phone", "-c", "user.email=p@x", ...args], { encoding: "utf8" });
+    execFileSync("git", ["clone", "-q", path.join(serverTmp.dir, repo), work]);
+    g("checkout", "-q", "-b", "phone");
+    await writeText(path.join(work, "Welcome.md"), "# 手机上改的");
+    g("commit", "-q", "-am", "from phone");
+    g("push", "-q", "origin", "phone");
+  }
+
+  it("分支列表里设置的分支排第一；读取另一个分支的提交和文件，不影响之后的同步", async () => {
+    await backup();
+    await pushPhoneBranch();
+    const src = store().restoreSource();
+    expect(await src.points(20)).toHaveLength(1);
+    expect(await src.branches?.()).toEqual(["main", "phone"]);
+    expect(src.onBranch?.("main")).toBe(src);
+
+    const phone = src.onBranch!("phone");
+    const pts = await phone.points(20);
+    expect(pts.map((p) => p.title)).toEqual(["from phone", "Test Vault 2026-10-31 10:00"]);
+    expect(new TextDecoder().decode(await phone.read(pts[0]!.id, "Welcome.md"))).toBe("# 手机上改的");
+
+    // 设置里的分支照常同步，phone 分支不受影响
+    await writeText(path.join(vaultDir, "Welcome.md"), "# 电脑上改的");
+    clock = new Date(2026, 9, 31, 11, 0);
+    expect((await backup())?.status).toBe("ok");
+    expect(server.show(repo, "main", "Welcome.md")).toBe("# 电脑上改的");
+    expect(server.show(repo, "phone", "Welcome.md")).toBe("# 手机上改的");
+  });
+
+  it("只有一个分支时列表只有它", async () => {
+    await backup();
+    expect(await store().restoreSource().branches?.()).toEqual(["main"]);
+  });
+});

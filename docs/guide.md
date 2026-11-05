@@ -118,7 +118,7 @@ The ribbon icon opens the sync history, which stays in the right sidebar. Each s
 
 Run **Multi Backup: Restore from backup…** from the command palette:
 
-1. **Choose version**: the destination and the point in time (a Git commit, a zip snapshot and so on).
+1. **Choose version**: the destination and the point in time (a Git commit, a zip snapshot and so on). When a Git repository has several branches, pick one above the commit list, for example to get notes another device backed up to its own branch. That branch is only read; the destination's settings stay the same and restored files go to the usual branch on the next sync.
 2. **Choose what**: the whole vault, a folder, or some files.
 3. **Preview & restore**: see which files will be overwritten or added, then confirm.
 
