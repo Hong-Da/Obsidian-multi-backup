@@ -7,6 +7,8 @@
 3. 提交，打标签 `v<x.y.z>`，推送分支和标签。
 4. GitHub Actions 的 Release 流程会：上架检查（标签与版本号一致）→ 代码检查 → 单元测试 → 构建 → 建草稿 Release，标签为 `<x.y.z>`（不带 v），附件为 `main.js`、`manifest.json`、`styles.css`。
 5. 在 GitHub 的 Releases 页检查草稿和自动生成的说明，点 **Publish release**。
+6. 打开社区目录的插件管理页 [community.obsidian.md/account/plugins/multi-backup](https://community.obsidian.md/account/plugins/multi-backup)，确认 Reviews 里出现了新版本。目录不一定会自动发现新 Release：页面若显示“No release matches your manifest version”，或者 Reviews 里没有新版本，点 **Check for new releases**，提示“A scan has been queued”就说明已排队扫描。
+7. 等新版本的扫描从 Pending 变成 Completed，展开看结果：Pass 是通过，Recommendation 是建议；有其他结果时按提示修改，再发一个更高版本号的 Release。目录说明在找到对应的 Release 之前不会扫描、也不会分发这个版本，所以第 6 步不能省。
 
 为什么有两个标签：项目的 git 标签统一带 v（`v0.6.0`）；Obsidian 按 `manifest.json` 里的版本号下载 Release 附件，所以 Release 的标签必须是 `0.6.0`。两个标签指向同一个提交。
 
