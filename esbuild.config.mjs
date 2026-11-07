@@ -11,7 +11,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const prod = process.argv.includes("production");
 const deploy = !prod || process.argv.includes("--deploy");
 const distDir = path.join(root, "dist");
-const vaultDir = process.env.DEV_VAULT || path.join(root, "dev-vault");
+const vaultDir = process.env.DEV_VAULT || path.join(root, "tmp", "demo-vault");
 const pluginId = "multi-backup";
 const assets = ["manifest.json", "styles.css"];
 

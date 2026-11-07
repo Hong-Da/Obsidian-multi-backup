@@ -2,7 +2,7 @@ import tseslint from "typescript-eslint";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default tseslint.config(
-  { ignores: ["dist/", "dev-vault/", "tmp/", ".toolchain/", "node_modules/", "DevelopDocs/", "InternalDocs/", "coverage/", "**/*.mjs", "vitest.config.ts", "vitest.accept.config.ts", "vitest.integration.config.ts", "vitest.perf.config.ts", "vitest.e2e.config.ts"] },
+  { ignores: ["dist/", "tmp/", ".toolchain/", "node_modules/", "DevelopDocs/", "InternalDocs/", "coverage/", "**/*.mjs", "vitest.config.ts", "vitest.accept.config.ts", "vitest.integration.config.ts", "vitest.perf.config.ts", "vitest.e2e.config.ts"] },
   {
     files: ["**/*.ts"],
     languageOptions: {

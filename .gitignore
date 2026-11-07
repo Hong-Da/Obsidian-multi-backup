@@ -7,7 +7,6 @@ data/
 logs/
 cache/
 tmp/
-dev-vault/
 coverage/
 
 # 内部文档（单独的本地仓库，不推送）与只在本机用的 Claude Code 配置

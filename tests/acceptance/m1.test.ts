@@ -1,5 +1,5 @@
 // M1 验收：1000 篇笔记的测试 Vault，桌面端首次与增量备份（本地镜像 + zip 快照）。
-// 生成的笔记写入 dev-vault/验收测试/ 并保留，便于之后在 Obsidian 中用真实界面复验。
+// 生成的笔记写入 tmp/accept-m1/vault/验收测试/ 并保留，便于之后在 Obsidian 中用真实界面复验。
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unzipSync } from "fflate";
 import { createHash } from "node:crypto";
@@ -10,7 +10,7 @@ import { LocalZip } from "../../src/destinations/local-zip";
 import { fs, listTree, MemoryState, nodeTargetFs, NodeVaultFs, path, removePath, ROOT, writeText } from "../support/node";
 import { SampleVault } from "../support/sample-vault";
 
-const VAULT = path.join(ROOT, "dev-vault");
+const VAULT = path.join(ROOT, "tmp", "accept-m1", "vault");
 const SET = "验收测试";
 const MIRROR = path.join(ROOT, "tmp", "accept-m1", "mirror");
 const ZIPS = path.join(ROOT, "tmp", "accept-m1", "zips");
@@ -35,7 +35,7 @@ const state = new MemoryState();
 let clock = new Date(2026, 9, 31, 18, 0);
 const dests = (): DestinationRun[] => [
   { id: "mirror", store: new LocalMirror(nodeTargetFs(), { root: MIRROR, deletePolicy: "trash30", keepVersions: 10, now: () => clock }), extraExcludes: [] },
-  { id: "zip", store: new LocalZip(nodeTargetFs(), { root: ZIPS, vaultName: "dev-vault", fileName: "{vault}_{date}_{time}.zip", keepCount: 30, keepDays: 90 }), extraExcludes: [] },
+  { id: "zip", store: new LocalZip(nodeTargetFs(), { root: ZIPS, vaultName: "accept-m1", fileName: "{vault}_{date}_{time}.zip", keepCount: 30, keepDays: 90 }), extraExcludes: [] },
 ];
 
 async function backup(label: string): Promise<BackupResult> {

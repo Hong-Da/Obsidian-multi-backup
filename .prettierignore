@@ -1,5 +1,4 @@
 dist/
-dev-vault/
 .toolchain/
 node_modules/
 DevelopDocs/

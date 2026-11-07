@@ -58,7 +58,7 @@
 ## 开发
 
 ```
-start.bat        # 或 ./start.sh：准备 Node 与 pnpm、安装依赖、构建并部署到 dev-vault/，进入 watch
+start.bat        # 或 ./start.sh：准备 Node 与 pnpm、安装依赖、构建并部署到 tmp/demo-vault/，进入 watch
 test.bat         # 或 ./test.sh：类型检查、代码检查、单元测试
 pnpm test:accept # 里程碑验收测试（数据量大，不在一键测试中）
 scripts/test-services.sh  # 集成测试：在 Docker 里启动 Gitea、WebDAV、S3（用测试机：MB_DOCKER_SSH=root@<地址>）
@@ -75,12 +75,12 @@ multi-backup/
 ├── src/                    插件源码：main.ts、sync-service.ts、core/（不依赖 obsidian）、destinations/、platform/、ui/、i18n/
 ├── tests/                  unit/（单元）、integration/（Docker 服务）、perf/（性能）、e2e/（模拟器端到端）、acceptance/（里程碑验收）、support/、mocks/
 ├── docker/                 compose.test.yml：集成测试服务（Gitea、rclone WebDAV、rclone S3）
-├── dev-vault/              本地测试 Vault（不入库）
 ├── assets/brand/           Logo 与图标
 ├── docs/                   guide.md / guide.zh-CN.md（使用说明）、images/（截图）、release.md（发布与上架）、alist.md、cloud-apps.md、changelog/
 ├── scripts/                env.bat/env.sh、version.mjs、release-check.mjs、check-public.mjs、buffer-shim.mjs（打包时注入 Buffer）、test-services.sh/.bat
 ├── .github/workflows/      ci.yml（测试）、release.yml（推送版本标签时建草稿 Release）
 ├── .githooks/              pre-push：推送前跑公开内容检查（启用：git config core.hooksPath .githooks）
+├── tmp/                    本地临时文件（不入库）：demo-vault/ 是开发用的测试 Vault，构建后自动部署插件
 ├── .toolchain/             项目内 Node、pnpm 存储与缓存（不入库）
 ├── manifest.json  versions.json  package.json  tsconfig.json  esbuild.config.mjs
 ├── start.bat/.sh  test.bat/.sh
