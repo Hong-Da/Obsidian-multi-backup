@@ -5,8 +5,7 @@ import { doneCount, requiredDone } from "../core/onboarding";
 import { destState, overview } from "../core/overview";
 import { currentLocale, t, tn } from "../i18n";
 import type MultiBackupPlugin from "../main";
-import { canBePrimary, CLOUD_NAMES, defaultAuto, isRemote, newDestination, newDestinationId, type DestinationConfig, type DestinationType } from "../settings";
-import { PrimaryModal } from "./primary-modal";
+import { canBePrimary, CLOUD_NAMES, isRemote, newDestination, primaryOf, newDestinationId, type DestinationConfig, type DestinationType } from "../settings";
 import { confirmAction } from "./confirm-modal";
 import { destDisplayName, destStatusText, destWhere, typeLabel } from "./messages";
 import { renderRing } from "./ring";
@@ -222,8 +221,27 @@ export class MultiBackupSettingTab extends PluginSettingTab {
       b.addEventListener("click", (e) => this.showAddMenu(e));
       return;
     }
+    const primary = primaryOf(s);
+    if (!primary) this.renderPrimaryHint(this.destBox);
     const list = this.destBox.createDiv({ cls: "mb-dest-list" });
-    for (const d of s.destinations) this.renderDest(list, d);
+    // 主同步端排第一（只改显示顺序）
+    for (const d of primary ? [primary, ...s.destinations.filter((x) => x !== primary)] : s.destinations) this.renderDest(list, d);
+  }
+
+  /** 没有主同步端、但有能做主同步端的在线目的地时提示一句；上手清单还开着时由清单负责 */
+  private renderPrimaryHint(box: HTMLElement): void {
+    const s = this.plugin.settings;
+    if (!s.onboarding.guideClosed || s.onboarding.primaryHintClosed) return;
+    const candidate = s.destinations.find((d) => d.enabled && isRemote(d) && canBePrimary(d));
+    if (!candidate) return;
+    const hint = box.createDiv({ cls: "mb-primary-hint" });
+    setIcon(hint.createSpan({ cls: "mb-primary-hint-icon" }), "arrow-down-up");
+    hint.createSpan({ text: t("settings.primaryHint"), cls: "mb-primary-hint-text" });
+    hint.createEl("button", { text: t("settings.primaryHintButton", { name: destDisplayName(candidate) }), cls: "mod-cta" }).addEventListener("click", () => this.makePrimary(candidate));
+    new ExtraButtonComponent(hint)
+      .setIcon("x")
+      .setTooltip(t("guide.close"))
+      .onClick(() => void this.plugin.saveOnboarding((o) => (o.primaryHintClosed = true)).then(() => this.refresh()));
   }
 
   private renderGuide(): void {
@@ -398,18 +416,8 @@ export class MultiBackupSettingTab extends PluginSettingTab {
     menu.showAtMouseEvent(e);
   }
 
-  /** 先只读比较，确认后设为主同步端并立即做首次同步 */
   private makePrimary(d: DestinationConfig): void {
-    const s = this.plugin.settings;
-    const current = s.destinations.find((x) => x.id === s.primaryId) ?? null;
-    new PrimaryModal(this.app, this.plugin.sync, d, current, async () => {
-      s.primaryId = d.id;
-      // 还是备份端的默认自动同步时，换成主同步端的默认值
-      if (JSON.stringify(d.auto) === JSON.stringify(defaultAuto("backup"))) d.auto = defaultAuto("primary");
-      await this.plugin.saveSettings();
-      this.refresh();
-      await this.plugin.sync.syncOne(d.id, "settings");
-    }).open();
+    this.plugin.makePrimary(d);
   }
 
   override hide(): void {

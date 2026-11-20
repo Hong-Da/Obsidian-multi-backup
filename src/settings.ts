@@ -168,6 +168,8 @@ export interface OnboardingState {
   welcomeDone: boolean;
   /** 设置页的上手清单已关闭 */
   guideClosed: boolean;
+  /** “还没有主同步端”的提示已关闭（或选了只做备份） */
+  primaryHintClosed: boolean;
 }
 
 export const DEFAULT_SETTINGS: MultiBackupSettings = {
@@ -181,7 +183,7 @@ export const DEFAULT_SETTINGS: MultiBackupSettings = {
   trashKeepDays: 30,
   syncBeforeClose: true,
   updatedAt: 0,
-  onboarding: { welcomeDone: false, guideClosed: false },
+  onboarding: { welcomeDone: false, guideClosed: false, primaryHintClosed: false },
 };
 
 /** 随配置上传、导出的设置：去掉只属于这台设备的首次运行指导状态 */
@@ -363,7 +365,7 @@ export function mergeSettings(saved: unknown): MultiBackupSettings {
 /** 升级前已经有目的地的老用户：欢迎窗口和上手清单都不再出现 */
 function mergeOnboarding(raw: unknown, existingUser: boolean): OnboardingState {
   const r = (typeof raw === "object" && raw !== null ? raw : {}) as Loose;
-  return { welcomeDone: bool(r.welcomeDone, existingUser), guideClosed: bool(r.guideClosed, existingUser) };
+  return { welcomeDone: bool(r.welcomeDone, existingUser), guideClosed: bool(r.guideClosed, existingUser), primaryHintClosed: bool(r.primaryHintClosed, false) };
 }
 
 function mergeAuto(raw: unknown, d: AutoSync): AutoSync {
@@ -382,6 +384,12 @@ function mergeAuto(raw: unknown, d: AutoSync): AutoSync {
 /** 能不能做主同步端：zip 只能做备份端；本地 git 仓库暂不支持（M3 决定，见决策记录） */
 export function canBePrimary(d: DestinationConfig): boolean {
   return d.type !== "zip" && d.type !== "git";
+}
+
+/** 设置里的主同步端（没有，或已不能做主同步端时为 null） */
+export function primaryOf(s: Pick<MultiBackupSettings, "destinations" | "primaryId">): DestinationConfig | null {
+  const d = s.destinations.find((x) => x.id === s.primaryId);
+  return d && canBePrimary(d) ? d : null;
 }
 
 /** 按行拆分规则文本，去掉空行与注释 */

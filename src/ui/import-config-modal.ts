@@ -6,6 +6,7 @@ import { whenLabel } from "../core/format";
 import { currentLocale, t, tn } from "../i18n";
 import type { DestinationConfig } from "../settings";
 import type { SyncService } from "../sync-service";
+import { actionNotice } from "./action-notice";
 import { destDisplayName, errorText, typeLabel } from "./messages";
 import { TYPE_ICON } from "./restore-modal";
 
@@ -24,6 +25,8 @@ export class ImportConfigModal extends Modal {
     app: App,
     private readonly sync: SyncService,
     private readonly onDone: () => void,
+    /** 导入的配置原来有主同步端时，点“设为主同步端…”调用 */
+    private readonly onMakePrimary: (id: string) => void,
   ) {
     super(app);
   }
@@ -176,16 +179,24 @@ export class ImportConfigModal extends Modal {
     }
     const parts = [tn("importConfig.doneDests", Array.isArray(c.settings.destinations) ? c.settings.destinations.length : 0)];
     if (needSecret.length) parts.push(t("importConfig.doneSecret", { names: needSecret.join(t("importConfig.sep")) }));
-    if (primary) parts.push(t("importConfig.donePrimary"));
+    this.onDone();
+    // 原来有主同步端：直接给按钮，确认比较后就能下载另一台设备的笔记
+    const primaryId = typeof c.settings.primaryId === "string" ? c.settings.primaryId : "";
+    if (primary && primaryId) {
+      actionNotice(t("importConfig.done"), parts.join(" ") + " " + t("importConfig.primaryAsk", { name: primary }), [
+        { text: t("dest.menu.makePrimary"), cta: true, onClick: () => this.onMakePrimary(primaryId) },
+        { text: t("notice.later") },
+      ]);
+      return;
+    }
     new Notice(
       createFragment((f) => {
         f.createEl("b", { text: t("importConfig.done") });
         f.createEl("br");
         f.appendText(parts.join(" "));
       }),
-      needSecret.length || primary ? 0 : 6000,
+      needSecret.length ? 0 : 6000,
     );
-    this.onDone();
   }
 
   private footer(el: HTMLElement, back: (() => void) | null, next: (() => void) | null, nextText = t("restore.next"), help = ""): void {

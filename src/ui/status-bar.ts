@@ -3,7 +3,7 @@ import { Menu, setIcon, setTooltip } from "obsidian";
 import { agoLabel, whenLabel } from "../core/format";
 import { destState, overview } from "../core/overview";
 import { currentLocale, t, tn } from "../i18n";
-import type { MultiBackupSettings } from "../settings";
+import { primaryOf, type MultiBackupSettings } from "../settings";
 import type { SyncService } from "../sync-service";
 import { destDisplayName } from "./messages";
 import { renderRing } from "./ring";
@@ -72,6 +72,9 @@ export class StatusBar {
       c.createSpan({ text: tn("status.conflicts", conflicts) });
       tip = tn("status.conflicts", conflicts) + " · " + tip;
     }
+    // 提示里写出主同步端（状态栏文字不变，保持简短）
+    const primary = primaryOf(s);
+    if (primary && ov.state !== "none") tip += " " + t("tip.primary", { name: destDisplayName(primary) });
     renderRing(this.el, ov.state === "none" ? "idle" : ov.state === "idle" ? "idle" : ov.state);
     this.el.createSpan({ text });
     setTooltip(this.el, tip, { placement: "top" });
@@ -97,7 +100,10 @@ export class StatusBar {
     menu.addSeparator();
     menu.addItem((i) => i.setTitle(t("menu.syncOne")).setIsLabel(true));
     const runningId = this.sync.running?.progress?.destId ?? null;
-    for (const d of s.destinations) {
+    const primary = primaryOf(s);
+    // 主同步端排第一，并标出来
+    const ordered = primary ? [primary, ...s.destinations.filter((d) => d !== primary)] : s.destinations;
+    for (const d of ordered) {
       const st = destState(d, this.sync.history, runningId);
       const aside =
         st.ring === "busy"
@@ -114,6 +120,11 @@ export class StatusBar {
         const row = f.createSpan({ cls: "mb-menu-dest" });
         renderRing(row, st.ring);
         row.createSpan({ text: destDisplayName(d), cls: "mb-menu-name" });
+        if (d === primary) {
+          const badge = row.createSpan({ cls: "mb-primary-badge" });
+          setIcon(badge.createSpan(), "arrow-down-up");
+          badge.createSpan({ text: t("dest.primary") });
+        }
         row.createSpan({ text: aside, cls: "mb-menu-aside" });
       });
       menu.addItem((i) => i.setTitle(title).setDisabled(!d.enabled).onClick(() => void this.sync.syncOne(d.id, "status-bar")));

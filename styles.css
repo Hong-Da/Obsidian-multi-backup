@@ -183,8 +183,6 @@ body.theme-dark {
 .mb-history-empty { margin: 48px 20px; text-align: center; color: var(--text-muted); font-size: var(--font-ui-small); }
 .mb-history-empty .mb-ring { width: 32px; height: 32px; }
 .mb-history-footer { display: flex; align-items: center; padding: 8px 12px; border-top: 1px solid var(--background-modifier-border); font-size: var(--font-ui-smaller); color: var(--text-faint); }
-.mb-link-button { background: none; box-shadow: none; color: var(--text-muted); padding: 0; height: auto; }
-.mb-link-button:hover { color: var(--text-error); background: none; }
 
 /* 远程 Git：地址输入框加宽、令牌生成步骤 */
 .mb-wide input[type="text"] { width: 300px; max-width: 100%; }
@@ -473,3 +471,33 @@ body:not(.is-phone) .mb-restore-wizard { min-height: min(560px, 85vh); }
 .mb-history-filters .mb-seg button { padding: 3px 7px; }
 .mb-history-filters .mb-history-action { padding: 4px; }
 
+
+/* 主同步端：怎么使用的选择窗口、设置页提示、侧栏卡片（REQ-055）；清空历史按钮（REQ-056） */
+.mb-use-opt { display: grid; grid-template-columns: 20px 1fr; gap: 4px 10px; padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius-m); box-shadow: inset 0 0 0 1px var(--background-modifier-border); cursor: pointer; }
+.mb-use-opt.is-selected { box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+.mb-use-opt input { margin: 3px 0 0; }
+.mb-use-opt > b { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: var(--font-semibold); }
+.mb-use-opt > p { grid-column: 2; margin: 0; font-size: var(--font-ui-small); color: var(--text-muted); }
+.mb-use-icon { display: inline-flex; }
+.mb-use-icon svg { width: 16px; height: 16px; }
+.mb-use-rec { font-size: var(--font-ui-smaller); font-weight: var(--font-normal); color: var(--interactive-accent); border: 1px solid var(--interactive-accent); border-radius: 10px; padding: 0 7px; }
+.mb-use-found { grid-column: 2; display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 8px 10px; border-radius: var(--radius-s); font-size: var(--font-ui-small); background: rgba(var(--color-green-rgb), 0.1); }
+.mb-use-found .mb-use-icon { color: var(--color-green); margin-top: 1px; }
+.mb-use-found.is-checking { background: var(--background-secondary); color: var(--text-muted); }
+.mb-use-found.is-checking .mb-use-icon { color: var(--text-muted); }
+.mb-use-help { flex: 1 1 200px; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.mb-use-modal .mb-plan-footer { align-items: center; flex-wrap: wrap; }
+.mb-primary-hint { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; margin-bottom: 10px; border-radius: var(--radius-m); background: var(--background-secondary); font-size: var(--font-ui-small); }
+.mb-primary-hint-icon { display: inline-flex; color: var(--interactive-accent); }
+.mb-primary-hint-icon svg { width: 16px; height: 16px; }
+.mb-primary-hint-text { flex: 1 1 240px; }
+.mb-menu-dest .mb-primary-badge { margin-left: 2px; }
+.mb-history-pcard { display: grid; grid-template-columns: 18px 1fr; gap: 8px; margin: 8px 12px 4px; padding: 10px 12px; border-radius: var(--radius-m); background: var(--background-primary); box-shadow: inset 0 0 0 1px var(--background-modifier-border); font-size: var(--font-ui-small); }
+.mb-history-pcard-icon { display: inline-flex; color: var(--interactive-accent); margin-top: 1px; }
+.mb-history-pcard-icon svg { width: 16px; height: 16px; }
+.mb-history-pcard.is-none .mb-history-pcard-icon { color: var(--text-faint); }
+.mb-history-pcard b { font-weight: var(--font-semibold); }
+.mb-history-pcard small { display: block; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.mb-history-clear { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: var(--font-ui-smaller); color: var(--text-muted); white-space: nowrap; }
+.mb-history-clear svg { width: 14px; height: 14px; }
+.mb-history-clear:hover { color: var(--text-error); background: rgba(var(--color-red-rgb), 0.1); }

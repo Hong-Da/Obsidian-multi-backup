@@ -3,10 +3,11 @@ import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
 import { dayLabel, timeOnly, whenLabel } from "../core/format";
 import { HISTORY_LIMIT, type HistoryDestination, type HistoryEntry } from "../core/history";
 import type { RingState } from "../core/overview";
-import { currentLocale, t, type Locale } from "../i18n";
+import { currentLocale, t, tn, type Locale } from "../i18n";
 import type MultiBackupPlugin from "../main";
 import { confirmAction } from "./confirm-modal";
-import { errorText, durationText } from "./messages";
+import { canBePrimary, isRemote, primaryOf } from "../settings";
+import { destDisplayName, errorText, durationText } from "./messages";
 import { renderRing } from "./ring";
 
 export const HISTORY_VIEW_TYPE = "multi-backup-history";
@@ -19,6 +20,7 @@ export class HistoryView extends ItemView {
   private countEl!: HTMLElement;
   private selectEl!: HTMLSelectElement;
   private restoresEl!: HTMLElement;
+  private primaryEl!: HTMLElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -77,11 +79,14 @@ export class HistoryView extends ItemView {
       setIcon(b, icon);
       b.addEventListener("click", run);
     }
+    this.primaryEl = root.createDiv({ cls: "mb-history-primary" });
     this.listEl = root.createDiv({ cls: "mb-history-runs" });
     const footer = root.createDiv({ cls: "mb-history-footer" });
     this.countEl = footer.createSpan();
     footer.createDiv({ cls: "mb-spacer" });
-    const clear = footer.createEl("button", { text: t("history.clear"), cls: "mb-link-button" });
+    const clear = footer.createEl("button", { cls: "clickable-icon mb-history-clear", attr: { "aria-label": t("history.clear") } });
+    setIcon(clear.createSpan(), "trash-2");
+    clear.createSpan({ text: t("history.clearShort") });
     clear.addEventListener("click", () => {
       void confirmAction(this.app, t("confirm.clear.title"), t("confirm.clear.body"), t("confirm.clear.ok")).then(async (ok) => {
         if (ok) await this.plugin.sync.clearHistory();
@@ -105,6 +110,7 @@ export class HistoryView extends ItemView {
     this.selectEl.value = names.has(this.destFilter) ? this.destFilter : "";
 
     this.renderRestores(lang);
+    this.renderPrimary(lang);
     this.listEl.empty();
     const now = Date.now();
     let shown = 0;
@@ -131,6 +137,42 @@ export class HistoryView extends ItemView {
       } else empty.createEl("p", { text: t("history.noMatch") });
     }
     this.countEl.setText(t("history.count", { count: history.length, limit: HISTORY_LIMIT }));
+  }
+
+  /** 顶部：主同步端是哪个、上次双向同步的结果；没有时提示一句（可以关掉） */
+  private renderPrimary(lang: Locale): void {
+    const el = this.primaryEl;
+    el.empty();
+    const s = this.plugin.settings;
+    const primary = primaryOf(s);
+    if (!primary) {
+      const candidate = s.destinations.find((d) => d.enabled && isRemote(d) && canBePrimary(d));
+      if (!candidate || s.onboarding.primaryHintClosed) return;
+      const card = el.createDiv({ cls: "mb-history-pcard is-none" });
+      setIcon(card.createSpan({ cls: "mb-history-pcard-icon" }), "arrow-down-up");
+      const text = card.createDiv();
+      text.createDiv({ text: t("history.noPrimary") });
+      const small = text.createEl("small", { text: t("history.noPrimaryDesc") + " " });
+      small.createEl("a", { text: t("history.setUp"), href: "#" }).addEventListener("click", (e) => {
+        e.preventDefault();
+        this.plugin.makePrimary(candidate);
+      });
+      return;
+    }
+    const card = el.createDiv({ cls: "mb-history-pcard" });
+    setIcon(card.createSpan({ cls: "mb-history-pcard-icon" }), "arrow-down-up");
+    const text = card.createDiv();
+    const head = text.createDiv();
+    head.appendText(t("history.primary"));
+    head.createEl("b", { text: destDisplayName(primary) });
+    const last = this.plugin.sync.history.flatMap((e) => e.destinations.filter((d) => d.id === primary.id && d.status !== "failed").map((d) => ({ e, d })))[0];
+    text.createEl("small", {
+      text: last
+        ? t("history.primaryLast", { when: whenLabel(last.e.finishedAt, Date.now(), lang), down: last.d.primary?.downloaded ?? 0, up: last.d.uploaded })
+        : t("history.primaryNever"),
+    });
+    const others = s.destinations.filter((d) => d !== primary && d.enabled).length;
+    if (others) text.createEl("small", { text: tn("history.primaryOthers", others) });
   }
 
   /** 最近 3 天内还能撤销的恢复，可以一键撤销 */

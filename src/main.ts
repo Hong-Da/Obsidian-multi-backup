@@ -6,7 +6,7 @@ import { ObsidianState } from "./platform/obsidian-state";
 import { CloudAuth } from "./platform/cloud-auth";
 import { obsidianRequest } from "./platform/obsidian-request";
 import { ConsoleSink, LogFileSink } from "./platform/log-file-sink";
-import { mergeSettings, type DestinationConfig, type MultiBackupSettings } from "./settings";
+import { canBePrimary, defaultAuto, isRemote, mergeSettings, type DestinationConfig, type MultiBackupSettings } from "./settings";
 import { SyncService } from "./sync-service";
 import { actionNotice } from "./ui/action-notice";
 import { DestinationModal } from "./ui/destination-modal";
@@ -17,8 +17,10 @@ import { CONFLICTS_VIEW_TYPE, ConflictsView } from "./ui/conflicts-view";
 import { HISTORY_VIEW_TYPE, HistoryView } from "./ui/history-view";
 import { destDisplayName, durationText, joinSentences } from "./ui/messages";
 import { RIBBON_ICON_ID, RIBBON_ICON_SVG } from "./ui/ring";
+import { PrimaryModal } from "./ui/primary-modal";
 import { MultiBackupSettingTab } from "./ui/setting-tab";
 import { StatusBar } from "./ui/status-bar";
+import { UseModal } from "./ui/use-modal";
 import { WelcomeModal } from "./ui/welcome-modal";
 
 export default class MultiBackupPlugin extends Plugin {
@@ -166,7 +168,33 @@ export default class MultiBackupPlugin extends Plugin {
       await this.saveSettings();
       this.settingTab.refresh();
       if (afterSave) afterSave();
+      else if (d.enabled && !this.settings.primaryId && isRemote(d) && canBePrimary(d)) this.askUse(d);
       else if (!this.onboarding().backed && d.enabled) this.askFirstBackup(d);
+    }).open();
+  }
+
+  /** 还没有主同步端时，新的在线目的地先问怎么用：默认主同步端（先比较再同步），也可以只做备份 */
+  private askUse(d: DestinationConfig): void {
+    new UseModal(this.app, this.sync, d, {
+      primary: () => this.makePrimary(d),
+      backup: () => {
+        void this.saveOnboarding((o) => (o.primaryHintClosed = true)).then(() => this.settingTab.refresh());
+        void this.sync.syncOne(d.id, "settings");
+      },
+    }).open();
+  }
+
+  /** 先只读比较，确认后设为主同步端并立即做首次同步 */
+  makePrimary(d: DestinationConfig): void {
+    const s = this.settings;
+    const current = s.destinations.find((x) => x.id === s.primaryId) ?? null;
+    new PrimaryModal(this.app, this.sync, d, current, async () => {
+      s.primaryId = d.id;
+      // 还是备份端的默认自动同步时，换成主同步端的默认值
+      if (JSON.stringify(d.auto) === JSON.stringify(defaultAuto("backup"))) d.auto = defaultAuto("primary");
+      await this.saveSettings();
+      this.settingTab.refresh();
+      await this.sync.syncOne(d.id, "settings");
     }).open();
   }
 
@@ -274,7 +302,10 @@ export default class MultiBackupPlugin extends Plugin {
   }
 
   openImportConfig(): void {
-    new ImportConfigModal(this.app, this.sync, () => this.settingTab.reload()).open();
+    new ImportConfigModal(this.app, this.sync, () => this.settingTab.reload(), (id) => {
+      const d = this.settings.destinations.find((x) => x.id === id);
+      if (d && canBePrimary(d)) this.makePrimary(d);
+    }).open();
   }
 
   openFileHistory(path: string): void {

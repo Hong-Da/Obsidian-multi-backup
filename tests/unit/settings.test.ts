@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBePrimary, DEFAULT_SETTINGS, isRemote, mergeSettings, newDestination, splitRules, type S3Config, type WebDavConfig } from "../../src/settings";
+import { canBePrimary, DEFAULT_SETTINGS, isRemote, mergeSettings, newDestination, primaryOf, splitRules, type S3Config, type WebDavConfig } from "../../src/settings";
 import { destWhere } from "../../src/ui/messages";
 
 describe("设置", () => {
@@ -78,6 +78,15 @@ describe("目的地设置", () => {
     expect(JSON.stringify(m)).not.toMatch(/password"|secretAccessKey/);
     expect(destWhere({ ...w, folder: "/Obsidian/笔记" })).toBe("https://dav.jianguoyun.com/dav/Obsidian/笔记");
     expect(destWhere({ ...s3, bucket: "notes" })).toBe("notes/obsidian");
+  });
+
+  it("主同步端：按 primaryId 找；没有、找不到或类型不能做主同步端时为 null", () => {
+    const gh = newDestination("git-remote");
+    const zip = newDestination("zip");
+    expect(primaryOf({ destinations: [zip, gh], primaryId: gh.id })).toBe(gh);
+    expect(primaryOf({ destinations: [zip, gh], primaryId: "" })).toBeNull();
+    expect(primaryOf({ destinations: [zip, gh], primaryId: "gone" })).toBeNull();
+    expect(primaryOf({ destinations: [zip, gh], primaryId: zip.id })).toBeNull();
   });
 
   it("规则文本按行拆分，去掉空行与注释", () => {

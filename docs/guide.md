@@ -100,9 +100,11 @@ Any one of them triggers a sync. On phones it runs only while Obsidian is open. 
 
 A normal destination is a **one-way backup**: it only receives this device's files. To keep devices identical, **make an online destination the primary** (Git, WebDAV, S3 or Dropbox):
 
-1. In the destination's “⋯” menu, choose **Make primary…**.
+1. In the destination's “⋯” menu, choose **Make primary…**. While there is no primary, saving a new online destination asks how to use it, with primary preselected; if the destination already holds notes from another device, it says how many can be downloaded.
 2. The plugin first compares this device with the destination without changing anything and shows what the first sync will do. The first sync deletes nothing: files that exist on only one side are copied to the other.
 3. Confirm to start two-way sync. Do this once on each device.
+
+You can see which destination is the primary in settings (listed first, with a “Primary” badge), at the top of the sync history sidebar, and in the status bar tooltip and menu.
 
 From then on, edits, new files, deletions and renames sync between devices. When a file changed on both sides, both versions are kept (the remote one is saved as a conflict copy) and listed in the **conflict list** for you to choose. Before a sync overwrites or deletes a local file, the old version is moved to `.trash/multi-backup/`.
 
@@ -136,7 +138,7 @@ By default each destination also stores the plugin configuration (without tokens
 1. Install the plugin and choose **I've used it on another device** in the welcome dialog.
 2. Add the destination your other device uses and enter its token or password.
 3. After saving, import from that destination. If several devices uploaded a configuration, pick the one you want.
-4. Afterwards, pick secrets where needed, and set the primary again (it compares first).
+4. Afterwards, pick secrets where needed. If the configuration had a primary, the import notice has a **Make primary…** button; it compares first and, once you confirm, downloads the other device's notes.
 
 You can also export the configuration to a file in **Plugin configuration** on the settings page and import it on the other device.
 

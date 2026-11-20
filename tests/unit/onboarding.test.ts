@@ -61,16 +61,20 @@ describe("首次运行指导", () => {
 
 describe("首次运行指导的设置", () => {
   it("新安装：欢迎窗口和清单都会出现", () => {
-    expect(mergeSettings(undefined).onboarding).toEqual({ welcomeDone: false, guideClosed: false });
+    expect(mergeSettings(undefined).onboarding).toEqual({ welcomeDone: false, guideClosed: false, primaryHintClosed: false });
   });
 
   it("升级前已有目的地的老用户：都不出现", () => {
-    expect(mergeSettings({ destinations: [newDestination("webdav")] }).onboarding).toEqual({ welcomeDone: true, guideClosed: true });
+    expect(mergeSettings({ destinations: [newDestination("webdav")] }).onboarding).toEqual({ welcomeDone: true, guideClosed: true, primaryHintClosed: false });
   });
 
   it("保存过的值优先", () => {
     const s = mergeSettings({ destinations: [newDestination("webdav")], onboarding: { welcomeDone: true, guideClosed: false } });
     expect(s.onboarding.guideClosed).toBe(false);
+  });
+
+  it("关掉过“还没有主同步端”的提示就不再出现", () => {
+    expect(mergeSettings({ onboarding: { primaryHintClosed: true } }).onboarding.primaryHintClosed).toBe(true);
   });
 
   it("随配置上传、导出的设置里没有这台设备的指导状态", () => {
